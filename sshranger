@@ -1,0 +1,193 @@
+#!/bin/bash
+#Written by xVlaze
+#Version: 1.0
+
+function scan() {
+#Traps the script in an infinite loop the only way of getting out of it is choosing a valid option
+while true; do
+
+read -p "Enter your preferred scanning style. Type 'help' for more information: " STYLE
+       
+    case "$STYLE" in
+
+
+	"arp")        
+	
+            echo "Scanning network..."
+	    IPLIST=$(arp | grep -vi incomplete | awk '!/Address/ {print $1}' | sort -u) 
+	    break
+
+	    ;;
+
+
+	"nmap")
+        
+            echo ""
+	    read -p 'Enter a custom subnet value (192.168.[VALUE].*): ' VALUE
+	
+	    while ! [[ "$VALUE" =~ ^-?[0-9]+$ ]]; do
+	    
+		     echo "Please specify an integer as your value, we (still) can't process alien IP addresses!"
+		     sleep 1
+		     read -p 'Enter a custom subnet value (192.168.[VALUE].*): ' VALUE
+
+	    done
+
+	    echo 'Scanning network...'
+	    IPLIST=$(nmap -sn 192.168.$VALUE.* | grep report | awk '{print $5}' | sort -u)
+	    break
+	
+	    ;;
+
+
+	"help")
+        
+            echo ""
+            echo "You need to specify which scanning method you want to use. Possible options are 'arp' or 'nmap'"
+	    echo "-without quotes-. While arp is faster, nmap will provide a more accurate result, as arp relies on"
+	    echo "computer network memory, which might have problems with recently created servers."
+	    echo ""
+
+	    ;;	
+
+
+	*)
+
+	    clear
+	    echo 'Please enter a valid value.'
+	    sleep 0.5
+
+	    ;;
+
+    esac
+
+done
+
+}
+
+
+
+function connect() {
+
+iparr=($IPLIST) #Converts IP list to an easier to process array
+read -p "Enter network's username: " USERNAME
+while [ "$USERNAME" == "" ]; do
+
+	clear
+	echo -n "Please enter a valid username."
+	sleep 1
+	clear
+	read -p "Enter network's username: " USERNAME
+
+done
+
+clear
+
+read -n1 -p "Do you want to try another username? [Y/n]" 
+
+if  [[ "$REPLY" = [yY] ]]; then
+
+	read -p "Enter a second username: " USERNAME2
+ 
+		while [ "$USERNAME2" == "" ]; do
+
+			clear
+			echo "Please enter a valid username."
+			sleep 1
+			clear
+			read -p "Enter a second username: " USERNAME2
+
+		done
+
+fi
+
+clear
+
+read -p 'Do you want to specify a custom port? (Default: 22) [Y/n] ' 
+
+if [[ "$REPLY" = [yY] ]]; then
+    
+	read -p 'Enter port number: ' PORT
+	
+		while ! [[ "$PORT" =~ ^-?[0-9]+$ ]]; do 
+			
+				echo "Please enter a valid value."
+				sleep 1
+				read -p "Enter port number: " PORT
+
+		done	
+
+	clear
+	echo '---------------------------------------------------------------------------------------------------------' 
+	echo 'These are the IPs found for connecting:'
+	echo
+  	echo ${iparr[@]}
+	# Only if USERNAME2 exists. -> echo $USERNAME2@${iparr[@]}':'$PORT
+	echo
+	echo '---------------------------------------------------------------------------------------------------------' 
+	echo
+	echo 'Connecting...'
+	echo
+       
+	    
+	for address in "${iparr[@]}"; do
+
+ 	    ssh "$address" -p $PORT  
+
+	done
+       
+else 
+
+	clear
+	PORT=22
+	echo '--------------------------------------------------------------------' 
+	echo 'These are the IPs found for connecting:'
+	echo
+	echo ${iparr[@]}	
+	echo
+	echo '--------------------------------------------------------------------' 
+	echo
+	echo 'Connecting...'
+	echo
+		
+
+fi
+}
+
+
+clear
+echo 'Welcome to SSHRanger, your easy-to-use multifunction SSH handler. This script will help you to scan'
+echo "and connect to SSH servers found in your network. Note that this is NOT a hacking tool: we don't (but"
+echo "you should) know any of your server passwords, so if you forget yours, think about your pet's name next time."
+sleep 1
+echo
+read  -p "Do you want to start a new network scan? [Y/n] " 
+
+if [[ $REPLY = [yY] ]]; then
+	
+	scan
+
+else
+
+	echo
+	echo
+	echo "We won't tell anybody you have been here..."
+	sleep 1
+	clear
+	exit 1
+
+fi
+
+read -p "The network has been successfully scanned. Do you want to start an SSH connection? " ANSCONN
+if [[ "$ANSCONN" = [yY] ]]; then
+	
+	connect
+
+else
+
+	echo "We won't tell anybody you have been here..."
+	sleep 1
+	clear
+	exit 1
+
+fi
